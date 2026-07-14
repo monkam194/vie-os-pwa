@@ -29,6 +29,19 @@
     --sage-soft:rgba(127,169,138,0.14);
     --radius:16px;
   }
+  body.theme-light{
+    --bg:#F4F1E9;
+    --surface:#FFFFFF;
+    --surface-2:#EDE8DB;
+    --border:#DDD5C2;
+    --text:#20242E;
+    --text-muted:#6B6F7C;
+    --accent:#A9803F;
+    --accent-soft:rgba(169,128,63,0.14);
+    --ember:#C85A3F;
+    --sage:#4E7D5C;
+    --sage-soft:rgba(78,125,92,0.14);
+  }
   *{box-sizing:border-box;}
   body{
     margin:0;
@@ -275,6 +288,10 @@
   .edit-row .del{
     background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0 4px;
   }
+  .edit-row input[type="time"]{
+    flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;
+    color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:13px;padding:6px 8px;outline:none;
+  }
   .add-habit-btn{
     background:none;border:1px solid var(--border);color:var(--accent);
     padding:10px;border-radius:10px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;
@@ -348,7 +365,10 @@ const DEFAULT_HABITS = [
 const DEFAULT_SETTINGS = {
   includeWeekends: false,
   streakThreshold: 0.7,
-  identityText: "Je suis un homme qui honore Dieu, protège son esprit, développe ses talents, tient ses promesses et vit intentionnellement chaque jour."
+  identityText: "Je suis un homme qui honore Dieu, protège son esprit, développe ses talents, tient ses promesses et vit intentionnellement chaque jour.",
+  theme: 'dark',
+  reminderEnabled: false,
+  reminderTime: '20:00'
 };
 
 const DEFAULT_BONUS_HABITS = [
@@ -651,6 +671,47 @@ function toggleWeekend(){
   saveSettings();
   render();
 }
+function applyTheme(){
+  document.body.classList.toggle('theme-light', settings.theme === 'light');
+}
+
+let lastReminderKey = null;
+async function toggleReminder(){
+  if(!settings.reminderEnabled){
+    if('Notification' in window && Notification.permission === 'default'){
+      await Notification.requestPermission();
+    }
+    if(!('Notification' in window) || Notification.permission !== 'granted'){
+      showToast('⚠️', "Autorise les notifications dans ton navigateur pour activer les rappels.");
+      return;
+    }
+  }
+  settings.reminderEnabled = !settings.reminderEnabled;
+  saveSettings();
+  render();
+}
+function updateReminderTime(value){
+  settings.reminderTime = value;
+  saveSettings();
+}
+function checkReminder(){
+  if(!settings.reminderEnabled) return;
+  if(!('Notification' in window) || Notification.permission !== 'granted') return;
+  const key = todayKey();
+  if(lastReminderKey === key) return;
+  const now = new Date();
+  const nowStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  if(nowStr >= settings.reminderTime && dayPct(key) < 1){
+    new Notification('Ce que je deviens', { body: "N'oublie pas tes habitudes du jour.", icon: 'icon-192.png' });
+    lastReminderKey = key;
+  }
+}
+function toggleTheme(){
+  settings.theme = settings.theme === 'light' ? 'dark' : 'light';
+  saveSettings();
+  applyTheme();
+  render();
+}
 function updateIdentityText(value){
   settings.identityText = value;
   saveSettings();
@@ -674,6 +735,14 @@ function deleteHabit(id){
 function addHabit(){
   const id = 'h'+Date.now();
   habits.push({id, name:'Nouvelle habitude', trigger:'', badDay:'', xp:10, active:true});
+  saveHabits();
+  render();
+}
+function moveHabit(id, direction){
+  const idx = habits.findIndex(h=>h.id===id);
+  const target = idx + direction;
+  if(idx < 0 || target < 0 || target >= habits.length) return;
+  [habits[idx], habits[target]] = [habits[target], habits[idx]];
   saveHabits();
   render();
 }
@@ -727,6 +796,38 @@ function downloadTodayPDF(){
   }
 
   doc.save(`vie-os-${key}.pdf`);
+}
+
+function downloadWeekPDF(){
+  const w = weekStats();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:[100,148]});
+  let y = 14;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(13);
+  doc.text('Bilan de la semaine', 10, y); y += 7;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  doc.text(`${todayKey(w.dates[0])} → ${todayKey(w.dates[w.dates.length-1])}`, 10, y); y += 8;
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(10);
+  doc.text(`Score : ${w.earned}/${w.possibleSoFar} XP (${Math.round(w.pct*100)}%)`, 10, y); y += 8;
+
+  doc.setFont('helvetica','bold');
+  doc.text('Detail par jour', 10, y); y += 6;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  const now = new Date(); now.setHours(0,0,0,0);
+  w.dates.forEach(d=>{
+    if(d > now) return;
+    const key = todayKey(d);
+    const pct = Math.round(dayPct(key)*100);
+    const mark = pct >= 100 ? '✓' : (pct >= Math.round(settings.streakThreshold*100) ? '~' : '○');
+    doc.text(`${mark}  ${key}  —  ${pct}%`, 10, y); y += 6;
+  });
+
+  doc.save(`vie-os-semaine-${todayKey()}.pdf`);
 }
 
 function toggleSettings(){
@@ -872,6 +973,7 @@ function render(){
         }).join('')}
       </div>
       <div class="bar"><div class="bar-fill" style="width:${Math.min(100,w.pct*100)}%"></div></div>
+      <button class="add-habit-btn" style="width:100%;margin-top:12px;" onclick="downloadWeekPDF()">⬇ Télécharger le PDF de la semaine</button>
     </section>
 
     <section>
@@ -919,6 +1021,18 @@ function render(){
 
     <button class="settings-toggle" onclick="toggleSettings()">${settingsOpen ? 'Fermer les réglages' : 'Modifier les habitudes et les XP'}</button>
     <div class="settings-panel ${settingsOpen?'open':''}">
+      <div class="weekend-toggle" style="margin-bottom:12px;" onclick="toggleTheme()">
+        Thème clair
+        <div class="switch ${settings.theme==='light'?'on':''}"><div class="switch-knob"></div></div>
+      </div>
+      <div class="weekend-toggle" style="margin-bottom:12px;" onclick="toggleReminder()">
+        Rappel quotidien
+        <div class="switch ${settings.reminderEnabled?'on':''}"><div class="switch-knob"></div></div>
+      </div>
+      ${settings.reminderEnabled ? `
+      <div class="edit-row">
+        <input type="time" aria-label="Heure du rappel quotidien" value="${settings.reminderTime}" onchange="updateReminderTime(this.value)">
+      </div>` : ''}
       <div class="edit-row" style="align-items:flex-start;">
         <textarea onchange="updateIdentityText(this.value)" style="flex:1;background:none;border:none;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none;resize:vertical;min-height:60px;">${settings.identityText}</textarea>
       </div>
@@ -926,7 +1040,9 @@ function render(){
         <div class="edit-row">
           <input type="text" value="${h.name}" onchange="updateHabitField('${h.id}','name',this.value)">
           <input type="number" value="${h.xp}" onchange="updateHabitField('${h.id}','xp',this.value)">
-          <button class="del" onclick="deleteHabit('${h.id}')">✕</button>
+          <button class="del" title="Monter" onclick="moveHabit('${h.id}',-1)">↑</button>
+          <button class="del" title="Descendre" onclick="moveHabit('${h.id}',1)">↓</button>
+          <button class="del" title="Supprimer l'habitude" onclick="deleteHabit('${h.id}')">✕</button>
         </div>
       `).join('')}
       <button class="add-habit-btn" onclick="addHabit()">+ Ajouter une habitude</button>
@@ -941,9 +1057,11 @@ function render(){
 
 (async function init(){
   await loadState();
+  applyTheme();
   render();
   checkCelebrations();
   setInterval(updateDayProgress, 30000);
+  setInterval(checkReminder, 60000);
 })();
 
 if ('serviceWorker' in navigator) {
