@@ -798,6 +798,38 @@ function downloadTodayPDF(){
   doc.save(`vie-os-${key}.pdf`);
 }
 
+function downloadWeekPDF(){
+  const w = weekStats();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:[100,148]});
+  let y = 14;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(13);
+  doc.text('Bilan de la semaine', 10, y); y += 7;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  doc.text(`${todayKey(w.dates[0])} → ${todayKey(w.dates[w.dates.length-1])}`, 10, y); y += 8;
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(10);
+  doc.text(`Score : ${w.earned}/${w.possibleSoFar} XP (${Math.round(w.pct*100)}%)`, 10, y); y += 8;
+
+  doc.setFont('helvetica','bold');
+  doc.text('Detail par jour', 10, y); y += 6;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  const now = new Date(); now.setHours(0,0,0,0);
+  w.dates.forEach(d=>{
+    if(d > now) return;
+    const key = todayKey(d);
+    const pct = Math.round(dayPct(key)*100);
+    const mark = pct >= 100 ? '✓' : (pct >= Math.round(settings.streakThreshold*100) ? '~' : '○');
+    doc.text(`${mark}  ${key}  —  ${pct}%`, 10, y); y += 6;
+  });
+
+  doc.save(`vie-os-semaine-${todayKey()}.pdf`);
+}
+
 function toggleSettings(){
   settingsOpen = !settingsOpen;
   render();
@@ -941,6 +973,7 @@ function render(){
         }).join('')}
       </div>
       <div class="bar"><div class="bar-fill" style="width:${Math.min(100,w.pct*100)}%"></div></div>
+      <button class="add-habit-btn" style="width:100%;margin-top:12px;" onclick="downloadWeekPDF()">⬇ Télécharger le PDF de la semaine</button>
     </section>
 
     <section>
