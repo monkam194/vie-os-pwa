@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Système — Ce que je deviens</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12151C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vie OS">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#12151C;
+    --surface:#1B1F29;
+    --surface-2:#232837;
+    --border:#2A2F3B;
+    --text:#EDEAE2;
+    --text-muted:#8B8F9C;
+    --accent:#C9A66B;
+    --accent-soft:rgba(201,166,107,0.14);
+    --ember:#E2725B;
+    --sage:#7FA98A;
+    --sage-soft:rgba(127,169,138,0.14);
+    --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{
+    max-width:480px;
+    margin:0 auto;
+    padding:28px 18px 80px;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin:0 0 6px;
+  }
+  h1.identity{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-style:italic;
+    font-size:22px;
+    line-height:1.45;
+    color:var(--text);
+    margin:0 0 20px;
+  }
+  .header-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+  }
+  .day-progress-wrap{
+    margin-bottom:18px;
+  }
+  .day-progress-top{
+    display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;
+  }
+  .day-progress-text{
+    font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);
+  }
+  .day-progress-text b{color:var(--accent);font-weight:600;}
+  .day-progress-track{
+    height:5px;border-radius:999px;background:var(--surface-2);overflow:hidden;position:relative;
+  }
+  .day-progress-fill{
+    height:100%;border-radius:999px;
+    background:linear-gradient(90deg, var(--accent) 0%, var(--ember) 100%);
+    transition:width 30s linear;
+  }
+  .date-label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    color:var(--text-muted);
+    text-transform:capitalize;
+  }
+  .streak-pill{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:6px 12px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+    font-weight:500;
+    white-space:nowrap;
+  }
+  .flame{filter: drop-shadow(0 0 4px rgba(226,114,91,0.5));}
+
+  section{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:16px;
+  }
+  .section-title{
+    font-family:'Fraunces',serif;
+    font-size:16px;
+    font-weight:600;
+    margin:0 0 4px;
+  }
+  .section-sub{
+    font-size:12px;
+    color:var(--text-muted);
+    margin:0 0 16px;
+  }
+
+  /* Today */
+  .today-grid{
+    display:flex;
+    gap:18px;
+    align-items:center;
+    margin-bottom:18px;
+  }
+  .ring-wrap{position:relative;width:84px;height:84px;flex-shrink:0;}
+  .ring-wrap svg{transform:rotate(-90deg);}
+  .ring-track{fill:none;stroke:var(--surface-2);stroke-width:8;}
+  .ring-fill{fill:none;stroke:var(--accent);stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset 0.5s ease;}
+  .ring-label{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  .ring-pct{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;}
+  .ring-xp{font-size:9px;color:var(--text-muted);}
+  .today-meta{flex:1;}
+  .today-msg{font-size:13px;color:var(--text-muted);line-height:1.5;}
+
+  .habit-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
+  .habit{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    padding:12px;
+    border-radius:12px;
+    background:var(--surface-2);
+    border:1px solid transparent;
+    cursor:pointer;
+    transition:background 0.2s, border-color 0.2s;
+  }
+  .habit.done{
+    background:var(--sage-soft);
+    border-color:rgba(127,169,138,0.35);
+  }
+  .habit-check{
+    width:22px;height:22px;border-radius:7px;
+    border:1.5px solid var(--text-muted);
+    flex-shrink:0;margin-top:1px;
+    display:flex;align-items:center;justify-content:center;
+    transition:all 0.15s;
+  }
+  .habit.done .habit-check{background:var(--sage);border-color:var(--sage);}
+  .habit-check svg{width:13px;height:13px;opacity:0;transition:opacity 0.15s;}
+  .habit.done .habit-check svg{opacity:1;}
+  .habit-body{flex:1;min-width:0;}
+  .habit-name{font-size:14px;font-weight:500;}
+  .habit.done .habit-name{color:var(--text-muted);text-decoration:line-through;text-decoration-color:var(--sage);}
+  .habit-trigger{font-size:11.5px;color:var(--text-muted);margin-top:2px;}
+  .habit-xp{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;color:var(--accent);
+    white-space:nowrap;margin-top:2px;
+  }
+
+  /* Week */
+  .week-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .weekend-toggle{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);}
+  .switch{
+    width:34px;height:20px;border-radius:999px;background:var(--surface-2);
+    position:relative;cursor:pointer;border:1px solid var(--border);flex-shrink:0;
+  }
+  .switch.on{background:var(--accent-soft);border-color:var(--accent);}
+  .switch-knob{
+    position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:var(--text-muted);transition:transform 0.2s, background 0.2s;
+  }
+  .switch.on .switch-knob{transform:translateX(14px);background:var(--accent);}
+
+  .day-dots{display:flex;justify-content:space-between;gap:6px;margin-bottom:14px;}
+  .day-dot-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;}
+  .day-dot{
+    width:100%;aspect-ratio:1;border-radius:10px;
+    background:var(--surface-2);border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text-muted);
+  }
+  .day-dot.today{border-color:var(--accent);}
+  .day-dot.good{background:var(--sage-soft);border-color:var(--sage);color:var(--sage);}
+  .day-dot.partial{background:rgba(201,166,107,0.1);border-color:var(--accent);color:var(--accent);}
+  .day-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;font-family:'JetBrains Mono',monospace;}
+
+  .stat-row{display:flex;justify-content:space-between;align-items:baseline;}
+  .stat-value{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;}
+  .stat-label{font-size:12px;color:var(--text-muted);}
+  .bar{height:6px;background:var(--surface-2);border-radius:999px;overflow:hidden;margin-top:10px;}
+  .bar-fill{height:100%;background:var(--accent);border-radius:999px;transition:width 0.5s ease;}
+
+  /* Month */
+  .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:14px;}
+  .month-cell{aspect-ratio:1;border-radius:6px;background:var(--surface-2);}
+  .month-cell.future{opacity:0.3;}
+  .month-cell.today{outline:1.5px solid var(--accent);outline-offset:1px;}
+
+  /* Reward path */
+  .path-wrap{display:flex;flex-direction:column;gap:0;margin-top:6px;}
+  .milestone{
+    display:flex;align-items:center;gap:14px;position:relative;padding:10px 0;
+  }
+  .milestone-line{
+    position:absolute;left:15px;top:0;bottom:0;width:1.5px;background:var(--border);
+  }
+  .milestone:last-child .milestone-line{display:none;}
+  .milestone-node{
+    width:32px;height:32px;border-radius:50%;
+    background:var(--surface-2);border:1.5px solid var(--border);
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;z-index:1;font-size:14px;
+  }
+  .milestone.unlocked .milestone-node{
+    background:var(--accent);border-color:var(--accent);
+    box-shadow:0 0 12px rgba(201,166,107,0.5);
+  }
+  .milestone-body{flex:1;}
+  .milestone-label{font-size:13px;font-weight:500;}
+  .milestone.unlocked .milestone-label{color:var(--text);}
+  .milestone:not(.unlocked) .milestone-label{color:var(--text-muted);}
+  .milestone-sub{font-size:11px;color:var(--text-muted);margin-top:1px;}
+  .milestone-amount{
+    font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
+    color:var(--text-muted);
+  }
+  .milestone.unlocked .milestone-amount{color:var(--accent);}
+  .total-unlocked{
+    text-align:center;padding:16px;margin-top:6px;
+    background:var(--accent-soft);border-radius:12px;
+    border:1px dashed var(--accent);
+  }
+  .total-unlocked .num{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:var(--accent);}
+  .total-unlocked .lbl{font-size:11px;color:var(--text-muted);margin-top:2px;}
+
+  /* Settings */
+  .settings-toggle{
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    width:100%;background:none;border:1px dashed var(--border);
+    color:var(--text-muted);padding:12px;border-radius:12px;
+    font-family:'Inter',sans-serif;font-size:12px;cursor:pointer;margin-top:4px;
+  }
+  .settings-panel{display:none;flex-direction:column;gap:10px;margin-top:14px;}
+  .settings-panel.open{display:flex;}
+  .edit-row{display:flex;gap:8px;align-items:center;background:var(--surface-2);padding:10px;border-radius:10px;}
+  .edit-row input[type="text"]{
+    flex:1;background:none;border:none;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none;
+  }
+  .edit-row input[type="number"]{
+    width:52px;background:var(--surface);border:1px solid var(--border);border-radius:6px;
+    color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px;text-align:center;padding:5px;outline:none;
+  }
+  .edit-row .del{
+    background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0 4px;
+  }
+  .add-habit-btn{
+    background:none;border:1px solid var(--border);color:var(--accent);
+    padding:10px;border-radius:10px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;
+  }
+
+  /* Bonus */
+  .bonus-lock-msg{
+    display:flex;align-items:center;gap:10px;
+    background:var(--surface-2);border:1px dashed var(--border);
+    border-radius:12px;padding:12px 14px;margin-bottom:12px;
+    font-size:12px;color:var(--text-muted);
+  }
+  .habit.bonus{opacity:0.4;filter:grayscale(0.6);pointer-events:none;}
+  .habit.bonus.unlocked{
+    opacity:1;filter:none;pointer-events:auto;
+    animation:fadeUnlock 0.5s ease;
+  }
+  .habit.bonus .habit-check{border-style:dashed;}
+  .habit.bonus.unlocked.done .habit-check{background:var(--accent);border-color:var(--accent);border-style:solid;}
+  .habit.bonus.unlocked.done .habit-check svg path{stroke:#12151C;}
+  .habit.bonus.unlocked.done .habit-name{text-decoration-color:var(--accent);}
+  .habit-xp.bonus-xp{color:var(--text-muted);}
+  @keyframes fadeUnlock{
+    from{opacity:0;transform:translateY(4px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+
+  /* Celebration */
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--surface);border:1px solid var(--accent);border-radius:14px;
+    padding:14px 20px;display:flex;align-items:center;gap:10px;
+    box-shadow:0 8px 30px rgba(0,0,0,0.4);
+    opacity:0;pointer-events:none;transition:all 0.4s ease;
+    max-width:calc(100% - 40px);z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast-text{font-size:13px;}
+  .toast-text b{color:var(--accent);}
+
+  .loading{text-align:center;padding:60px 20px;color:var(--text-muted);font-size:13px;}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="loading" id="loading">Chargement de ton système…</div>
+</div>
+
+<div class="toast" id="toast">
+  <span id="toast-emoji" style="font-size:20px;">🎉</span>
+  <span class="toast-text" id="toast-text"></span>
+</div>
+
+<script>
+const STORAGE_HABITS = 'life-os:habits';
+const STORAGE_BONUS = 'life-os:bonus-habits';
+const STORAGE_LOGS = 'life-os:logs';
+const STORAGE_SETTINGS = 'life-os:settings';
+const STORAGE_MILESTONES = 'life-os:unlocked-milestones';
+
+const DEFAULT_HABITS = [
+  {id:'h1', name:'Prière + Bible', trigger:"Après avoir éteint l'alarme", badDay:'5 minutes suffisent', xp:15, active:true},
+  {id:'h2', name:'Planifier la journée', trigger:'Après la prière', badDay:'2 min, juste le Top 3', xp:10, active:true},
+  {id:'h3', name:'Bouger le corps', trigger:'En rentrant à la maison', badDay:'10 pompes + 10 squats + étirement', xp:15, active:true},
+  {id:'h4', name:'Deep Work', trigger:'Après le dîner', badDay:'20 minutes suffisent', xp:20, active:true},
+  {id:'h5', name:'Lecture', trigger:'Avant de dormir', badDay:'2 pages minimum', xp:10, active:true},
+  {id:'h6', name:'Préparer demain', trigger:'Avant de ranger le téléphone', badDay:'5 min : vêtements + sac + calendrier', xp:10, active:true},
+  {id:'h7', name:"Protéger l'attention", trigger:'À chaque ouverture du téléphone', badDay:"Une seule question : pourquoi j'ouvre ça ?", xp:10, active:true},
+];
+
+const DEFAULT_SETTINGS = {
+  includeWeekends: false,
+  streakThreshold: 0.7,
+  identityText: "Je suis un homme qui honore Dieu, protège son esprit, développe ses talents, tient ses promesses et vit intentionnellement chaque jour."
+};
+
+const DEFAULT_BONUS_HABITS = [
+  {id:'b1', name:'Gym', trigger:'Séance complète, au-delà du "bouger le corps"', active:true},
+  {id:'b2', name:'Création de contenu', trigger:'Écrire, filmer ou publier quelque chose', active:true},
+  {id:'b3', name:'Réviser mes cartes Quizlet', trigger:'Un set complet', active:true},
+  {id:'b4', name:'Propreté', trigger:'Ranger sa chambre / son espace de travail', active:true},
+  {id:'b5', name:'Side project', trigger:'Avancer sur le projet perso', active:true},
+  {id:'b6', name:'Lecture supplémentaire', trigger:'Au-delà des 20 minutes du soir', active:true},
+  {id:'b7', name:'Étude biblique avancée', trigger:'Au-delà de la lecture du matin', active:true},
+  {id:'b8', name:'Échecs', trigger:'Une partie ou un exercice tactique', active:true},
+];
+
+const MILESTONES = [
+  {id:'m1', label:'5/5 jours ≥ 70%', sub:'Une semaine tenue', amount:3, type:'week5'},
+  {id:'m2', label:'Streak 7 jours', sub:'Une semaine sans rupture', amount:5, type:'streak', value:7},
+  {id:'m3', label:'Semaine parfaite', sub:'100% sur tous les jours inclus', amount:7, type:'perfectWeek'},
+  {id:'m4', label:'Streak 14 jours', sub:'Deux semaines de suite', amount:8, type:'streak', value:14},
+  {id:'m5', label:'Premier mois ≥ 70%', sub:'Un mois entier tenu', amount:12, type:'month'},
+  {id:'m6', label:'Streak 30 jours', sub:'Le vrai cap de la discipline', amount:15, type:'streak', value:30},
+];
+
+let habits = [];
+let bonusHabits = [];
+let logs = {};
+let settings = { ...DEFAULT_SETTINGS };
+let unlockedMilestones = [];
+let settingsOpen = false;
+
+function todayKey(d = new Date()){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function dailyTarget(){
+  return habits.filter(h=>h.active).reduce((s,h)=>s+h.xp,0);
+}
+function dayXP(dateKey){
+  const log = logs[dateKey];
+  if(!log) return 0;
+  return habits.filter(h=>h.active && log.completed.includes(h.id)).reduce((s,h)=>s+h.xp,0);
+}
+function dayPct(dateKey){
+  const t = dailyTarget();
+  return t === 0 ? 0 : dayXP(dateKey) / t;
+}
+function isIncluded(date){
+  const day = date.getDay(); // 0 sun .. 6 sat
+  if(settings.includeWeekends) return true;
+  return day >= 1 && day <= 5;
+}
+
+// Stockage local du téléphone/navigateur — persiste tant que tu ne vides pas
+// les données du site. Fonctionne hors-ligne, aucune connexion nécessaire.
+function storageGet(key, fallback){
+  try{
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  }catch(e){
+    return fallback;
+  }
+}
+function storageSet(key, value){
+  try{
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  }catch(e){
+    // Espace de stockage plein ou navigation privée : on prévient une seule fois
+    console.warn('Sauvegarde locale impossible', e);
+    return false;
+  }
+}
+
+async function loadState(){
+  habits = storageGet(STORAGE_HABITS, DEFAULT_HABITS);
+  bonusHabits = storageGet(STORAGE_BONUS, DEFAULT_BONUS_HABITS);
+  logs = storageGet(STORAGE_LOGS, {});
+  settings = { ...DEFAULT_SETTINGS, ...storageGet(STORAGE_SETTINGS, {}) };
+  unlockedMilestones = storageGet(STORAGE_MILESTONES, []);
+}
+async function saveHabits(){ storageSet(STORAGE_HABITS, habits); }
+async function saveBonusHabits(){ storageSet(STORAGE_BONUS, bonusHabits); }
+async function saveLogs(){ storageSet(STORAGE_LOGS, logs); }
+async function saveSettings(){ storageSet(STORAGE_SETTINGS, settings); }
+async function saveMilestones(){ storageSet(STORAGE_MILESTONES, unlockedMilestones); }
+
+// Sauvegarde manuelle — exporte tout dans un fichier téléchargeable.
+// Utile avant de changer de téléphone, ou juste par sécurité.
+function exportBackup(){
+  const backup = {
+    habits, bonusHabits, logs, settings, unlockedMilestones,
+    exportedAt: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `vie-os-sauvegarde-${todayKey()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Restauration — recharge un fichier de sauvegarde exporté précédemment.
+function importBackup(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try{
+      const data = JSON.parse(e.target.result);
+      if(data.habits) habits = data.habits;
+      if(data.bonusHabits) bonusHabits = data.bonusHabits;
+      if(data.logs) logs = data.logs;
+      if(data.settings) settings = data.settings;
+      if(data.unlockedMilestones) unlockedMilestones = data.unlockedMilestones;
+      saveHabits(); saveBonusHabits(); saveLogs(); saveSettings(); saveMilestones();
+      render();
+      showToast('✅', 'Sauvegarde restaurée avec succès.');
+    }catch(err){
+      showToast('⚠️', 'Fichier de sauvegarde invalide.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+
+function toggleHabit(id){
+  const key = todayKey();
+  if(!logs[key]) logs[key] = {completed:[], bonusCompleted:[]};
+  const idx = logs[key].completed.indexOf(id);
+  if(idx >= 0) logs[key].completed.splice(idx,1);
+  else logs[key].completed.push(id);
+  saveLogs();
+  const wasComplete = dayPct(key) >= 1 && idx < 0;
+  render();
+  checkCelebrations(wasComplete);
+}
+
+function toggleBonusHabit(id){
+  const key = todayKey();
+  if(dayPct(key) < 1) return; // reste verrouillé tant que l'obligatoire n'est pas fini
+  if(!logs[key]) logs[key] = {completed:[], bonusCompleted:[]};
+  if(!logs[key].bonusCompleted) logs[key].bonusCompleted = [];
+  const idx = logs[key].bonusCompleted.indexOf(id);
+  if(idx >= 0) logs[key].bonusCompleted.splice(idx,1);
+  else logs[key].bonusCompleted.push(id);
+  saveLogs();
+  render();
+}
+
+function computeStreak(){
+  let streak = 0;
+  let d = new Date();
+  d.setHours(0,0,0,0);
+  while(true){
+    if(isIncluded(d)){
+      const pct = dayPct(todayKey(d));
+      const key = todayKey(d);
+      const hasLog = !!logs[key];
+      if(key === todayKey() && !hasLog){
+        // today not started yet, don't break, just don't count
+      } else if(pct >= settings.streakThreshold){
+        streak++;
+      } else {
+        break;
+      }
+    }
+    d.setDate(d.getDate()-1);
+    if(streak > 400) break;
+  }
+  return streak;
+}
+
+function getWeekDates(){
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diffToMonday);
+  const dates = [];
+  const span = settings.includeWeekends ? 7 : 5;
+  for(let i=0;i<span;i++){
+    const d = new Date(monday);
+    d.setDate(monday.getDate()+i);
+    dates.push(d);
+  }
+  return dates;
+}
+
+function weekStats(){
+  const dates = getWeekDates();
+  const now = new Date(); now.setHours(0,0,0,0);
+  let earned = 0, possibleSoFar = 0, allGoodSoFar = true, daysSoFar = 0;
+  dates.forEach(d=>{
+    if(d <= now){
+      daysSoFar++;
+      earned += dayXP(todayKey(d));
+      possibleSoFar += dailyTarget();
+      if(dayPct(todayKey(d)) < settings.streakThreshold) allGoodSoFar = false;
+    }
+  });
+  const isLastDay = dates.length && todayKey(dates[dates.length-1]) === todayKey(now);
+  return {earned, possibleSoFar, pct: possibleSoFar? earned/possibleSoFar : 0, allGoodSoFar, isLastDay, dates, daysSoFar};
+}
+
+function monthDates(){
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const first = new Date(y,m,1);
+  const last = new Date(y,m+1,0);
+  const dates = [];
+  for(let d=1; d<=last.getDate(); d++) dates.push(new Date(y,m,d));
+  return dates;
+}
+
+function monthStats(){
+  const dates = monthDates();
+  const now = new Date(); now.setHours(0,0,0,0);
+  let earned=0, possible=0;
+  dates.forEach(d=>{
+    if(isIncluded(d) && d<=now){
+      earned += dayXP(todayKey(d));
+      possible += dailyTarget();
+    }
+  });
+  return {earned, possible, pct: possible? earned/possible : 0};
+}
+
+function checkMilestoneUnlocks(){
+  const streak = computeStreak();
+  const w = weekStats();
+  const m = monthStats();
+  let newlyUnlocked = null;
+  MILESTONES.forEach(ms=>{
+    if(unlockedMilestones.includes(ms.id)) return;
+    let hit = false;
+    if(ms.type==='streak' && streak >= ms.value) hit = true;
+    if(ms.type==='week5' && w.isLastDay && w.allGoodSoFar && w.daysSoFar >= (settings.includeWeekends?7:5)) hit = true;
+    if(ms.type==='perfectWeek' && w.isLastDay && w.pct >= 1) hit = true;
+    if(ms.type==='month' && m.pct >= 0.7 && new Date().getDate() === monthDates().length) hit = true;
+    if(hit){
+      unlockedMilestones.push(ms.id);
+      newlyUnlocked = ms;
+    }
+  });
+  if(newlyUnlocked){ saveMilestones(); }
+  return newlyUnlocked;
+}
+
+let lastCelebrated = {day:null, week:null, month:null};
+function checkCelebrations(){
+  const key = todayKey();
+  if(dayPct(key) >= 1 && lastCelebrated.day !== key){
+    lastCelebrated.day = key;
+    showToast('🎉', 'Jour complet — le bonus est débloqué.');
+  }
+  const ms = checkMilestoneUnlocks();
+  if(ms){
+    setTimeout(()=> showToast('🔥', `Palier débloqué : <b>${ms.label}</b> — +${ms.amount}€`), dayPct(key)>=1 ? 3200 : 0);
+  }
+  render();
+}
+
+let toastTimer;
+function showToast(emoji, html){
+  const t = document.getElementById('toast');
+  document.getElementById('toast-emoji').textContent = emoji;
+  document.getElementById('toast-text').innerHTML = html;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 3800);
+}
+
+function getDayProgress(){
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24,0,0,0);
+  const msLeft = midnight - now;
+  const totalMinutesInDay = 24*60;
+  const minutesElapsed = totalMinutesInDay - Math.floor(msLeft/60000);
+  const pctElapsed = minutesElapsed / totalMinutesInDay;
+  const hoursLeft = Math.floor(msLeft / 3600000);
+  const minutesLeft = Math.floor((msLeft % 3600000) / 60000);
+  return { pctElapsed, hoursLeft, minutesLeft };
+}
+
+function updateDayProgress(){
+  const el = document.getElementById('day-progress');
+  if(!el) return; // pas encore rendu
+  const { pctElapsed, hoursLeft, minutesLeft } = getDayProgress();
+  const fill = document.getElementById('day-progress-fill');
+  const text = document.getElementById('day-progress-text');
+  if(fill) fill.style.width = `${Math.min(100, pctElapsed*100)}%`;
+  if(text) text.innerHTML = `<b>${hoursLeft}h ${String(minutesLeft).padStart(2,'0')}min</b> avant la fin de la journée`;
+}
+
+function toggleWeekend(){
+  settings.includeWeekends = !settings.includeWeekends;
+  saveSettings();
+  render();
+}
+function updateIdentityText(value){
+  settings.identityText = value;
+  saveSettings();
+  render();
+}
+
+function updateHabitField(id, field, value){
+  const h = habits.find(x=>x.id===id);
+  if(!h) return;
+  if(field==='xp') h.xp = Math.max(1, parseInt(value)||1);
+  if(field==='name') h.name = value;
+  saveHabits();
+  render();
+}
+function deleteHabit(id){
+  const h = habits.find(x=>x.id===id);
+  if(h) h.active = false;
+  saveHabits();
+  render();
+}
+function addHabit(){
+  const id = 'h'+Date.now();
+  habits.push({id, name:'Nouvelle habitude', trigger:'', badDay:'', xp:10, active:true});
+  saveHabits();
+  render();
+}
+function downloadTodayPDF(){
+  const key = todayKey();
+  const log = logs[key] || {completed:[], bonusCompleted:[]};
+  const done = habits.filter(h=>h.active && log.completed.includes(h.id));
+  const notDone = habits.filter(h=>h.active && !log.completed.includes(h.id));
+  const bonusDone = bonusHabits.filter(h=>h.active && (log.bonusCompleted||[]).includes(h.id));
+  const target = dailyTarget();
+  const earned = dayXP(key);
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:[100,148]}); // petit format, façon carte
+  let y = 14;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(13);
+  doc.text('Ce que je suis', 10, y); y += 7;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  doc.text(key, 10, y); y += 8;
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(10);
+  doc.text(`Score du jour : ${earned}/${target} XP (${Math.round((target?earned/target:0)*100)}%)`, 10, y); y += 8;
+
+  doc.setFont('helvetica','bold');
+  doc.text('Tâches accomplies', 10, y); y += 6;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  if(done.length === 0){ doc.text('— aucune pour le moment —', 10, y); y += 6; }
+  done.forEach(h=>{ doc.text(`✓  ${h.name}  (+${h.xp} XP)`, 10, y); y += 6; });
+
+  y += 3;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(10);
+  doc.text('Non terminées', 10, y); y += 6;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  if(notDone.length === 0){ doc.text('— tout est fait —', 10, y); y += 6; }
+  notDone.forEach(h=>{ doc.text(`○  ${h.name}`, 10, y); y += 6; });
+
+  if(bonusDone.length){
+    y += 3;
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.text('Bonus faits', 10, y); y += 6;
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    bonusDone.forEach(h=>{ doc.text(`✓  ${h.name}`, 10, y); y += 6; });
+  }
+
+  doc.save(`vie-os-${key}.pdf`);
+}
+
+function toggleSettings(){
+  settingsOpen = !settingsOpen;
+  render();
+}
+
+const WEEK_LABELS_5 = ['L','M','M','J','V'];
+const WEEK_LABELS_7 = ['L','M','M','J','V','S','D'];
+const MONTH_NAMES = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const DAY_NAMES = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+
+function render(){
+  const active = habits.filter(h=>h.active);
+  const key = todayKey();
+  const log = logs[key] || {completed:[]};
+  const target = dailyTarget();
+  const earned = dayXP(key);
+  const pct = target? earned/target : 0;
+  const circumference = 2*Math.PI*34;
+  const offset = circumference * (1-pct);
+
+  const streak = computeStreak();
+  const w = weekStats();
+  const m = monthStats();
+  const now = new Date();
+
+  const weekLabels = settings.includeWeekends ? WEEK_LABELS_7 : WEEK_LABELS_5;
+
+  let dayMsg = "C'est un nouveau jour. Une chose à la fois.";
+  if(pct >= 1) dayMsg = "Journée tenue. Rien à prouver de plus aujourd'hui.";
+  else if(pct >= 0.7) dayMsg = "Tu es au-dessus de la barre. Le streak tient.";
+  else if(earned > 0) dayMsg = "C'est commencé. Continue, sans pression.";
+
+  const totalUnlocked = MILESTONES.filter(ms=>unlockedMilestones.includes(ms.id)).reduce((s,ms)=>s+ms.amount,0);
+
+  const dayProgress = getDayProgress();
+
+  document.getElementById('app').innerHTML = `
+    <div class="day-progress-wrap" id="day-progress">
+      <div class="day-progress-top">
+        <span class="day-progress-text" id="day-progress-text"><b>${dayProgress.hoursLeft}h ${String(dayProgress.minutesLeft).padStart(2,'0')}min</b> avant la fin de la journée</span>
+      </div>
+      <div class="day-progress-track">
+        <div class="day-progress-fill" id="day-progress-fill" style="width:${Math.min(100, dayProgress.pctElapsed*100)}%"></div>
+      </div>
+    </div>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Ce que je suis</p>
+        <h1 class="identity">${settings.identityText}</h1>
+        <p class="date-label">${DAY_NAMES[now.getDay()]} ${now.getDate()} ${MONTH_NAMES[now.getMonth()]}</p>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin:-6px 0 18px;">
+      <div class="streak-pill"><span class="flame">🔥</span> ${streak} jour${streak>1?'s':''} de suite</div>
+    </div>
+
+    <section>
+      <p class="section-title">Aujourd'hui</p>
+      <p class="section-sub">Coche au fil de la journée — chaque case est une promesse tenue.</p>
+      <div class="today-grid">
+        <div class="ring-wrap">
+          <svg width="84" height="84" viewBox="0 0 84 84">
+            <circle class="ring-track" cx="42" cy="42" r="34"></circle>
+            <circle class="ring-fill" cx="42" cy="42" r="34" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"></circle>
+          </svg>
+          <div class="ring-label">
+            <span class="ring-pct">${Math.round(pct*100)}%</span>
+            <span class="ring-xp">${earned}/${target} XP</span>
+          </div>
+        </div>
+        <div class="today-meta">
+          <p class="today-msg">${dayMsg}</p>
+        </div>
+      </div>
+      <ul class="habit-list">
+        ${active.map(h=>{
+          const done = log.completed.includes(h.id);
+          return `
+          <li class="habit ${done?'done':''}" onclick="toggleHabit('${h.id}')">
+            <div class="habit-check">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M3 8L6.5 11.5L13 4.5" stroke="#12151C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="habit-body">
+              <div class="habit-name">${h.name}</div>
+              <div class="habit-trigger">${h.trigger}${h.badDay ? ' · jour difficile : '+h.badDay : ''}</div>
+            </div>
+            <div class="habit-xp">+${h.xp} XP</div>
+          </li>`;
+        }).join('')}
+      </ul>
+      <button class="add-habit-btn" style="width:100%;margin-top:12px;" onclick="downloadTodayPDF()">⬇ Télécharger le PDF du jour</button>
+    </section>
+
+    <section>
+      <p class="section-title">Bonus</p>
+      <p class="section-sub">${pct >= 1 ? "L'obligatoire est fait — profites-en, sans pression." : 'Se débloque une fois les 7 tâches obligatoires terminées.'}</p>
+      ${pct < 1 ? `<div class="bonus-lock-msg">🔒 Termine ta journée obligatoire pour accéder au bonus.</div>` : ''}
+      <ul class="habit-list">
+        ${bonusHabits.filter(h=>h.active).map(h=>{
+          const bonusDone = (log.bonusCompleted||[]).includes(h.id);
+          const unlocked = pct >= 1;
+          return `
+          <li class="habit bonus ${unlocked?'unlocked':''} ${bonusDone?'done':''}" onclick="toggleBonusHabit('${h.id}')">
+            <div class="habit-check">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M3 8L6.5 11.5L13 4.5" stroke="#12151C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="habit-body">
+              <div class="habit-name">${h.name}</div>
+              <div class="habit-trigger">${h.trigger}</div>
+            </div>
+            <div class="habit-xp bonus-xp">hors XP</div>
+          </li>`;
+        }).join('')}
+      </ul>
+    </section>
+
+    <section>
+      <div class="week-header">
+        <div>
+          <p class="section-title" style="margin-bottom:2px;">Cette semaine</p>
+          <p class="section-sub" style="margin-bottom:0;">${w.earned}/${w.possibleSoFar} XP</p>
+        </div>
+        <div class="weekend-toggle" onclick="toggleWeekend()">
+          Week-end
+          <div class="switch ${settings.includeWeekends?'on':''}"><div class="switch-knob"></div></div>
+        </div>
+      </div>
+      <div class="day-dots">
+        ${w.dates.map((d,i)=>{
+          const p = dayPct(todayKey(d));
+          const isToday = todayKey(d)===key;
+          const isFuture = d > now;
+          let cls = 'day-dot';
+          if(isToday) cls += ' today';
+          if(!isFuture && p>=1) cls += ' good';
+          else if(!isFuture && p>=0.7) cls += ' partial';
+          return `<div class="day-dot-wrap">
+            <div class="${cls}">${isFuture?'':(Math.round(p*100)+'%')}</div>
+            <span class="day-label">${weekLabels[i]}</span>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="bar"><div class="bar-fill" style="width:${Math.min(100,w.pct*100)}%"></div></div>
+    </section>
+
+    <section>
+      <p class="section-title">Ce mois</p>
+      <div class="stat-row" style="margin-bottom:12px;">
+        <span class="stat-value">${Math.round(m.pct*100)}%</span>
+        <span class="stat-label">${m.earned}/${m.possible} XP</span>
+      </div>
+      <div class="month-grid">
+        ${monthDates().map(d=>{
+          const isFuture = d > now;
+          const isToday = todayKey(d)===key;
+          const p = isFuture ? 0 : dayPct(todayKey(d));
+          const opacity = isFuture ? 0.15 : Math.max(0.12, p);
+          let cls = 'month-cell'+(isFuture?' future':'')+(isToday?' today':'');
+          const bg = isFuture ? 'var(--surface-2)' : `rgba(201,166,107,${opacity})`;
+          return `<div class="${cls}" style="background:${bg}"></div>`;
+        }).join('')}
+      </div>
+    </section>
+
+    <section>
+      <p class="section-title">Chemin de discipline</p>
+      <p class="section-sub">50€ investis dans l'homme que tu deviens — jamais dans les cases cochées, seulement dans la constance.</p>
+      <div class="path-wrap">
+        ${MILESTONES.map(ms=>{
+          const unlocked = unlockedMilestones.includes(ms.id);
+          return `
+          <div class="milestone ${unlocked?'unlocked':''}">
+            <div class="milestone-line"></div>
+            <div class="milestone-node">${unlocked?'✓':''}</div>
+            <div class="milestone-body">
+              <div class="milestone-label">${ms.label}</div>
+              <div class="milestone-sub">${ms.sub}</div>
+            </div>
+            <div class="milestone-amount">+${ms.amount}€</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="total-unlocked">
+        <div class="num">${totalUnlocked}€ / 50€</div>
+        <div class="lbl">débloqués par la constance</div>
+      </div>
+    </section>
+
+    <button class="settings-toggle" onclick="toggleSettings()">${settingsOpen ? 'Fermer les réglages' : 'Modifier les habitudes et les XP'}</button>
+    <div class="settings-panel ${settingsOpen?'open':''}">
+      <div class="edit-row" style="align-items:flex-start;">
+        <textarea onchange="updateIdentityText(this.value)" style="flex:1;background:none;border:none;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none;resize:vertical;min-height:60px;">${settings.identityText}</textarea>
+      </div>
+      ${active.map(h=>`
+        <div class="edit-row">
+          <input type="text" value="${h.name}" onchange="updateHabitField('${h.id}','name',this.value)">
+          <input type="number" value="${h.xp}" onchange="updateHabitField('${h.id}','xp',this.value)">
+          <button class="del" onclick="deleteHabit('${h.id}')">✕</button>
+        </div>
+      `).join('')}
+      <button class="add-habit-btn" onclick="addHabit()">+ Ajouter une habitude</button>
+      <button class="add-habit-btn" onclick="exportBackup()">⬇ Télécharger une sauvegarde</button>
+      <label class="add-habit-btn" style="text-align:center;display:block;">
+        ⬆ Restaurer une sauvegarde
+        <input type="file" accept="application/json" onchange="importBackup(event)" style="display:none;">
+      </label>
+    </div>
+  `;
+}
+
+(async function init(){
+  await loadState();
+  render();
+  checkCelebrations();
+  setInterval(updateDayProgress, 30000);
+})();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
