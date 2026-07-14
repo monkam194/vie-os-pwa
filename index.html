@@ -999,7 +999,7 @@ function render(){
         <div class="edit-row">
           <input type="text" value="${h.name}" onchange="updateHabitField('${h.id}','name',this.value)">
           <input type="number" value="${h.xp}" onchange="updateHabitField('${h.id}','xp',this.value)">
-          <button class="del" onclick="deleteHabit('${h.id}')">✕</button>
+          <button class="del" title="Supprimer l'habitude" onclick="deleteHabit('${h.id}')">✕</button>
         </div>
       `).join('')}
       <button class="add-habit-btn" onclick="addHabit()">+ Ajouter une habitude</button>
