@@ -738,6 +738,14 @@ function addHabit(){
   saveHabits();
   render();
 }
+function moveHabit(id, direction){
+  const idx = habits.findIndex(h=>h.id===id);
+  const target = idx + direction;
+  if(idx < 0 || target < 0 || target >= habits.length) return;
+  [habits[idx], habits[target]] = [habits[target], habits[idx]];
+  saveHabits();
+  render();
+}
 function downloadTodayPDF(){
   const key = todayKey();
   const log = logs[key] || {completed:[], bonusCompleted:[]};
@@ -999,6 +1007,8 @@ function render(){
         <div class="edit-row">
           <input type="text" value="${h.name}" onchange="updateHabitField('${h.id}','name',this.value)">
           <input type="number" value="${h.xp}" onchange="updateHabitField('${h.id}','xp',this.value)">
+          <button class="del" title="Monter" onclick="moveHabit('${h.id}',-1)">↑</button>
+          <button class="del" title="Descendre" onclick="moveHabit('${h.id}',1)">↓</button>
           <button class="del" title="Supprimer l'habitude" onclick="deleteHabit('${h.id}')">✕</button>
         </div>
       `).join('')}
