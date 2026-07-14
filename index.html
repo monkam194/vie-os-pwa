@@ -288,6 +288,10 @@
   .edit-row .del{
     background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0 4px;
   }
+  .edit-row input[type="time"]{
+    flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;
+    color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:13px;padding:6px 8px;outline:none;
+  }
   .add-habit-btn{
     background:none;border:1px solid var(--border);color:var(--accent);
     padding:10px;border-radius:10px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;
@@ -362,7 +366,9 @@ const DEFAULT_SETTINGS = {
   includeWeekends: false,
   streakThreshold: 0.7,
   identityText: "Je suis un homme qui honore Dieu, protège son esprit, développe ses talents, tient ses promesses et vit intentionnellement chaque jour.",
-  theme: 'dark'
+  theme: 'dark',
+  reminderEnabled: false,
+  reminderTime: '20:00'
 };
 
 const DEFAULT_BONUS_HABITS = [
@@ -668,6 +674,38 @@ function toggleWeekend(){
 function applyTheme(){
   document.body.classList.toggle('theme-light', settings.theme === 'light');
 }
+
+let lastReminderKey = null;
+async function toggleReminder(){
+  if(!settings.reminderEnabled){
+    if('Notification' in window && Notification.permission === 'default'){
+      await Notification.requestPermission();
+    }
+    if(!('Notification' in window) || Notification.permission !== 'granted'){
+      showToast('⚠️', "Autorise les notifications dans ton navigateur pour activer les rappels.");
+      return;
+    }
+  }
+  settings.reminderEnabled = !settings.reminderEnabled;
+  saveSettings();
+  render();
+}
+function updateReminderTime(value){
+  settings.reminderTime = value;
+  saveSettings();
+}
+function checkReminder(){
+  if(!settings.reminderEnabled) return;
+  if(!('Notification' in window) || Notification.permission !== 'granted') return;
+  const key = todayKey();
+  if(lastReminderKey === key) return;
+  const now = new Date();
+  const nowStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  if(nowStr >= settings.reminderTime && dayPct(key) < 1){
+    new Notification('Ce que je deviens', { body: "N'oublie pas tes habitudes du jour.", icon: 'icon-192.png' });
+    lastReminderKey = key;
+  }
+}
 function toggleTheme(){
   settings.theme = settings.theme === 'light' ? 'dark' : 'light';
   saveSettings();
@@ -946,6 +984,14 @@ function render(){
         Thème clair
         <div class="switch ${settings.theme==='light'?'on':''}"><div class="switch-knob"></div></div>
       </div>
+      <div class="weekend-toggle" style="margin-bottom:12px;" onclick="toggleReminder()">
+        Rappel quotidien
+        <div class="switch ${settings.reminderEnabled?'on':''}"><div class="switch-knob"></div></div>
+      </div>
+      ${settings.reminderEnabled ? `
+      <div class="edit-row">
+        <input type="time" value="${settings.reminderTime}" onchange="updateReminderTime(this.value)">
+      </div>` : ''}
       <div class="edit-row" style="align-items:flex-start;">
         <textarea onchange="updateIdentityText(this.value)" style="flex:1;background:none;border:none;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none;resize:vertical;min-height:60px;">${settings.identityText}</textarea>
       </div>
@@ -972,6 +1018,7 @@ function render(){
   render();
   checkCelebrations();
   setInterval(updateDayProgress, 30000);
+  setInterval(checkReminder, 60000);
 })();
 
 if ('serviceWorker' in navigator) {
