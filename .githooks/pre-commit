@@ -1,0 +1,9 @@
+#!/bin/sh
+echo "Pre-commit checks..."
+FILES=$(git diff --cached --name-only | grep -vE "^(\.githooks/|test/)")
+if [ -n "$FILES" ] && echo "$FILES" | xargs grep -nE "console\.log|print\(" 2>/dev/null; then
+  echo "Instruction de debogage detectee dans les fichiers stages."
+  exit 1
+fi
+echo "Pre-commit OK"
+exit 0

@@ -1,0 +1,10 @@
+{
+  "name": "vie-os-pwa",
+  "version": "1.0.0",
+  "description": "Vie OS - systeme de vie personnel (habitudes, identite, discipline), en PWA.",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "license": "MIT"
+}
