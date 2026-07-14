@@ -1031,7 +1031,7 @@ function render(){
       </div>
       ${settings.reminderEnabled ? `
       <div class="edit-row">
-        <input type="time" value="${settings.reminderTime}" onchange="updateReminderTime(this.value)">
+        <input type="time" aria-label="Heure du rappel quotidien" value="${settings.reminderTime}" onchange="updateReminderTime(this.value)">
       </div>` : ''}
       <div class="edit-row" style="align-items:flex-start;">
         <textarea onchange="updateIdentityText(this.value)" style="flex:1;background:none;border:none;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none;resize:vertical;min-height:60px;">${settings.identityText}</textarea>
