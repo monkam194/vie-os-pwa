@@ -29,6 +29,19 @@
     --sage-soft:rgba(127,169,138,0.14);
     --radius:16px;
   }
+  body.theme-light{
+    --bg:#F4F1E9;
+    --surface:#FFFFFF;
+    --surface-2:#EDE8DB;
+    --border:#DDD5C2;
+    --text:#20242E;
+    --text-muted:#6B6F7C;
+    --accent:#A9803F;
+    --accent-soft:rgba(169,128,63,0.14);
+    --ember:#C85A3F;
+    --sage:#4E7D5C;
+    --sage-soft:rgba(78,125,92,0.14);
+  }
   *{box-sizing:border-box;}
   body{
     margin:0;
@@ -348,7 +361,8 @@ const DEFAULT_HABITS = [
 const DEFAULT_SETTINGS = {
   includeWeekends: false,
   streakThreshold: 0.7,
-  identityText: "Je suis un homme qui honore Dieu, protège son esprit, développe ses talents, tient ses promesses et vit intentionnellement chaque jour."
+  identityText: "Je suis un homme qui honore Dieu, protège son esprit, développe ses talents, tient ses promesses et vit intentionnellement chaque jour.",
+  theme: 'dark'
 };
 
 const DEFAULT_BONUS_HABITS = [
@@ -651,6 +665,15 @@ function toggleWeekend(){
   saveSettings();
   render();
 }
+function applyTheme(){
+  document.body.classList.toggle('theme-light', settings.theme === 'light');
+}
+function toggleTheme(){
+  settings.theme = settings.theme === 'light' ? 'dark' : 'light';
+  saveSettings();
+  applyTheme();
+  render();
+}
 function updateIdentityText(value){
   settings.identityText = value;
   saveSettings();
@@ -919,6 +942,10 @@ function render(){
 
     <button class="settings-toggle" onclick="toggleSettings()">${settingsOpen ? 'Fermer les réglages' : 'Modifier les habitudes et les XP'}</button>
     <div class="settings-panel ${settingsOpen?'open':''}">
+      <div class="weekend-toggle" style="margin-bottom:12px;" onclick="toggleTheme()">
+        Thème clair
+        <div class="switch ${settings.theme==='light'?'on':''}"><div class="switch-knob"></div></div>
+      </div>
       <div class="edit-row" style="align-items:flex-start;">
         <textarea onchange="updateIdentityText(this.value)" style="flex:1;background:none;border:none;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none;resize:vertical;min-height:60px;">${settings.identityText}</textarea>
       </div>
@@ -941,6 +968,7 @@ function render(){
 
 (async function init(){
   await loadState();
+  applyTheme();
   render();
   checkCelebrations();
   setInterval(updateDayProgress, 30000);
